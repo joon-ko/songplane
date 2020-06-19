@@ -2,7 +2,7 @@
     "compilerOptions": {
         "outFile": "./static/index.js",
         "module": "None",
-        "target": "ES6"
+        "target": "ESNext"
     },
     "files": [
         "static/index.ts"

@@ -15,5 +15,12 @@ func main() {
 		c.HTML(http.StatusOK, "index.tmpl", gin.H{})
 	})
 
+	api := r.Group("/api")
+	{
+		api.GET("/test", func(c *gin.Context) {
+			c.Data(http.StatusOK, "text/plain", []byte("hello world\n"))
+		})
+	}
+
 	r.Run()
 }
