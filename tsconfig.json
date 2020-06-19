@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "outFile": "./static/index.js",
+        "module": "None",
+        "target": "ES6"
+    },
+    "files": [
+        "index.ts"
+    ]
+}
