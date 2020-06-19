@@ -1,3 +1,5 @@
+[devlog](devlog/part1.md)
+
 ### running locally
 
 * (prerequisite) install go and tsc
