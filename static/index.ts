@@ -1,5 +1,6 @@
 const canvas = <HTMLCanvasElement> document.getElementById('canvas')
 const ctx = <CanvasRenderingContext2D> canvas.getContext('2d')
+const info = <HTMLElement> document.getElementById('info')
 
 const FONT_SIZE = 20
 const CAMERA_SPEED = 5 // px/frame
@@ -16,12 +17,13 @@ interface Size {
 
 let camera: Point = {x: 0, y: 0}
 let canvasCenter: Point
-let maxBlocks: Size
 let magnitude: Size
 
 let holdPoint: Point = null
 let oldCamera: Point = null
+let selectedBlock: Point = null
 
+let holdSpace = false
 let holdLeft = false
 let holdRight = false
 let holdDown = false
@@ -36,15 +38,15 @@ const resizeCanvas = (): void => {
         x: Math.round(window.innerWidth/2),
         y: Math.round(window.innerHeight/2)
     }
-    maxBlocks = {
-        w: Math.ceil(window.innerWidth/100),
-        h: Math.ceil(window.innerHeight/100)
-    }
+    const maxBlocks = [
+        Math.ceil(window.innerWidth/100),
+        Math.ceil(window.innerHeight/100)
+    ]
     magnitude = {
-        w: (maxBlocks.w + (maxBlocks.w % 2 === 0 ? 0 : 1)) / 2,
-        h: (maxBlocks.h + (maxBlocks.h % 2 === 0 ? 0 : 1)) / 2
+        w: (maxBlocks[0] + (maxBlocks[0] % 2 === 0 ? 0 : 1)) / 2,
+        h: (maxBlocks[1] + (maxBlocks[1] % 2 === 0 ? 0 : 1)) / 2
     }
-    ctx.strokeStyle = 'blue'
+    ctx.strokeStyle = 'black'
     ctx.font = `${FONT_SIZE}px sans-serif`
 }
 resizeCanvas()
@@ -61,7 +63,27 @@ const getCursorPosition = (e: MouseEvent): Point => {
     }
 }
 
+const getBlockFromCursor = (cursor: Point): Point => {
+    const canvasCorner = { // top left corner of canvas, in 'real' coords
+        x: camera.x - canvasCenter.x,
+        y: camera.y + canvasCenter.y
+    }
+    const realPoint = {
+        x: canvasCorner.x + cursor.x,
+        y: canvasCorner.y - cursor.y
+    }
+    return {
+        x: Math.floor((realPoint.x + 50) / 100),
+        y: Math.floor((realPoint.y + 50) / 100)
+    }
+}
+
 const onMousedown = (e: MouseEvent): void => {
+    if (!holdSpace) {
+        const cursor = getCursorPosition(e)
+        selectedBlock = getBlockFromCursor(cursor)
+        return
+    }
     holdPoint = getCursorPosition(e)
     oldCamera = camera
 }
@@ -79,12 +101,18 @@ const onMousemove = (e: MouseEvent): void => {
 }
 
 const onMouseup = (e: MouseEvent): void => {
+    if (!holdSpace) {
+        return
+    }
     holdPoint = null
     oldCamera = null
 }
 
 const onKeyDown = (e: KeyboardEvent): void => {
     switch (e.keyCode) {
+        case 32:
+            holdSpace = true
+            break
         case 37:
             holdLeft = true
             break
@@ -102,6 +130,9 @@ const onKeyDown = (e: KeyboardEvent): void => {
 
 const onKeyUp = (e: KeyboardEvent): void => {
     switch (e.keyCode) {
+        case 32:
+            holdSpace = false
+            break
         case 37:
             holdLeft = false
             break
@@ -190,8 +221,19 @@ const moveCamera = (): void => {
     camera.y += cameraSpeed[1]
 }
 
+const renderInfo = (): void => {
+    const selected = (selectedBlock !== null)
+        ? `selected: (${selectedBlock.x}, ${selectedBlock.y})`
+        : ''
+    info.innerHTML = `
+        <div>camera: (${camera.x}, ${camera.y})</div>
+        <div>${selected}</div>
+    `
+}
+
 window.setInterval(() => {
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     draw()
     moveCamera()
+    renderInfo()
 }, 1000/60)
