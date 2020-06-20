@@ -15,13 +15,20 @@ interface Size {
     h: number  // height
 }
 
+interface Block {
+    color: string,
+    pitch?: number
+}
+
+let blocks: Map<string, Block> = new Map()
+
 let camera: Point = {x: 0, y: 0}
 let canvasCenter: Point
 let magnitude: Size
 
 let holdPoint: Point = null
 let oldCamera: Point = null
-let selectedBlock: Point = null
+let selected: Point = {x: 0, y: 0}
 
 let holdSpace = false
 let holdLeft = false
@@ -81,7 +88,7 @@ const getBlockFromCursor = (cursor: Point): Point => {
 const onMousedown = (e: MouseEvent): void => {
     if (!holdSpace) {
         const cursor = getCursorPosition(e)
-        selectedBlock = getBlockFromCursor(cursor)
+        selected = getBlockFromCursor(cursor)
         return
     }
     holdPoint = getCursorPosition(e)
@@ -109,7 +116,16 @@ const onMouseup = (e: MouseEvent): void => {
 }
 
 const onKeyDown = (e: KeyboardEvent): void => {
+    let key: string
     switch (e.keyCode) {
+        case 81: // Q
+            key = `${selected.x},${selected.y}`
+            blocks.set(key, {color: '#c6e1ff'}) // light blue
+            break
+        case 87: // W
+            key = `${selected.x},${selected.y}`
+            blocks.set(key, {color: '#ffe29f'}) // light orange
+            break
         case 32:
             holdSpace = true
             break
@@ -169,20 +185,10 @@ const blockToCanvasPos = (i: number, j: number): Point => {
     }
 }
 
-const drawBlock = (pos: Point, i: number, j: number): void => {
-    // the origin is special
-    if (i === 0 && j === 0) {
-        ctx.fillStyle = 'rgb(196, 230, 255)'
-        ctx.fillRect(pos.x, pos.y, 100, 100)
-        ctx.fillStyle = 'black'
-    }
-    if (selectedBlock !== null && i === selectedBlock.x && j === selectedBlock.y) {
-        ctx.fillStyle = 'rgb(186, 255, 184)'
-        ctx.fillRect(pos.x, pos.y, 100, 100)
-        ctx.fillStyle = 'black'
-    }
-
+const drawBorders = (pos: Point, i: number, j: number): void => {
     ctx.strokeRect(pos.x, pos.y, 100, 100)
+    ctx.strokeStyle = 'black'
+    ctx.lineWidth = 1.0
 
     const text = `(${i}, ${j})`
     const textWidth = ctx.measureText(text).width
@@ -193,19 +199,45 @@ const drawBlock = (pos: Point, i: number, j: number): void => {
     ctx.fillText(text, realTextPos[0], realTextPos[1])
 }
 
+const drawBlock = (pos: Point, block: Block): void => {
+    ctx.fillStyle = block.color
+    ctx.fillRect(pos.x, pos.y, 100, 100)
+    ctx.fillStyle = 'black'
+}
+
+const drawSelectedBorder = (pos: Point): void => {
+    ctx.strokeStyle = 'rgb(186, 255, 184)'
+    ctx.lineWidth = 5.0
+    ctx.strokeRect(pos.x, pos.y, 100, 100)
+    ctx.strokeStyle = 'black'
+    ctx.lineWidth = 1.0
+}
+
 const draw = (): void => {
+    // draw existing blocks first
+    for (let key of blocks.keys()) {
+        const pos = key.split(',').map(Number)
+        const canvasPos = blockToCanvasPos(pos[0], pos[1])
+        drawBlock(canvasPos, blocks.get(key))
+    }
+
+    // then fill in with borders, info
     const cameraBlock: Point = {
         x: Math.floor((camera.x + 50) / 100),
         y: Math.floor((camera.y + 50) / 100)
     }
     const [lowX, highX] = [cameraBlock.x - magnitude.w, cameraBlock.x + magnitude.w]
     const [lowY, highY] = [cameraBlock.y - magnitude.h, cameraBlock.y + magnitude.h]
-    for (let i=lowX; i<=highX; i++) {
-        for (let j=lowY; j<=highY; j++) {
+    for (let i = lowX; i <= highX; i++) {
+        for (let j = lowY; j <= highY; j++) {
             const canvasPos = blockToCanvasPos(i, j)
-            drawBlock(canvasPos, i, j)
+            drawBorders(canvasPos, i, j)
         }
     }
+
+    // redraw the border around the selected block
+    const canvasPos = blockToCanvasPos(selected.x, selected.y)
+    drawSelectedBorder(canvasPos)
 }
 
 const moveCamera = (): void => {
@@ -227,11 +259,11 @@ const moveCamera = (): void => {
 }
 
 const renderInfo = (): void => {
-    const selected = (selectedBlock !== null)
-        ? `selected: (${selectedBlock.x}, ${selectedBlock.y})`
-        : ''
+    let key = `${selected.x},${selected.y}`
+    const colorText = blocks.has(key) ? blocks.get(key).color : ''
     info.innerHTML = `
-        <div>${selected}</div>
+        <div>selected: (${selected.x}, ${selected.y})</div>
+        <div>color: ${colorText}</div>
     `
 }
 
