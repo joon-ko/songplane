@@ -169,21 +169,26 @@ const blockToCanvasPos = (i: number, j: number): Point => {
     }
 }
 
-const drawBlock = (canvasPos: Point, i: number, j: number): void => {
+const drawBlock = (pos: Point, i: number, j: number): void => {
     // the origin is special
     if (i === 0 && j === 0) {
-        ctx.fillStyle = '#70a3cc'
-        ctx.fillRect(canvasPos.x, canvasPos.y, 100, 100)
+        ctx.fillStyle = 'rgb(196, 230, 255)'
+        ctx.fillRect(pos.x, pos.y, 100, 100)
+        ctx.fillStyle = 'black'
+    }
+    if (selectedBlock !== null && i === selectedBlock.x && j === selectedBlock.y) {
+        ctx.fillStyle = 'rgb(186, 255, 184)'
+        ctx.fillRect(pos.x, pos.y, 100, 100)
         ctx.fillStyle = 'black'
     }
 
-    ctx.strokeRect(canvasPos.x, canvasPos.y, 100, 100)
+    ctx.strokeRect(pos.x, pos.y, 100, 100)
 
     const text = `(${i}, ${j})`
     const textWidth = ctx.measureText(text).width
     const realTextPos = [
-        canvasPos.x + 50 - (textWidth/2),
-        canvasPos.y + 50
+        pos.x + 50 - (textWidth/2),
+        pos.y + 50
     ]
     ctx.fillText(text, realTextPos[0], realTextPos[1])
 }
@@ -226,7 +231,6 @@ const renderInfo = (): void => {
         ? `selected: (${selectedBlock.x}, ${selectedBlock.y})`
         : ''
     info.innerHTML = `
-        <div>camera: (${camera.x}, ${camera.y})</div>
         <div>${selected}</div>
     `
 }
