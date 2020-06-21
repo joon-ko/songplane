@@ -17,10 +17,14 @@ interface Size {
 
 interface Block {
     color: string,
+    source: OscillatorNode,
+    gain: GainNode,
     pitch?: number
 }
 
 let blocks: Map<string, Block> = new Map()
+let audioCtx: AudioContext = null
+let audioStarted = false
 
 let camera: Point = {x: 0, y: 0}
 let canvasCenter: Point
@@ -85,14 +89,36 @@ const getBlockFromCursor = (cursor: Point): Point => {
     }
 }
 
+const initializeBlock = (block: Block): void => {
+    block.gain.gain.value = 0
+    block.source.connect(block.gain)
+    block.gain.connect(audioCtx.destination)
+    block.source.start()
+}
+
+const playSound = (block: Block): void => {
+    block.gain.gain.cancelScheduledValues(audioCtx.currentTime)
+    block.gain.gain.setValueCurveAtTime([0, 0.2], audioCtx.currentTime, 0.005)
+    block.gain.gain.setValueCurveAtTime([0.2, 0], audioCtx.currentTime + 0.005, 0.5 - 0.005)
+}
+
 const onMousedown = (e: MouseEvent): void => {
-    if (!holdSpace) {
-        const cursor = getCursorPosition(e)
-        selected = getBlockFromCursor(cursor)
+    // start the audio context on the first click
+    if (!audioStarted) {
+        audioCtx = new AudioContext()
+        audioStarted = true
+    }
+
+    // if spacebar is held, start dragging the camera view
+    if (holdSpace) {
+        holdPoint = getCursorPosition(e)
+        oldCamera = camera
         return
     }
-    holdPoint = getCursorPosition(e)
-    oldCamera = camera
+
+    // if just a normal click, select the clicked block
+    const cursor = getCursorPosition(e)
+    selected = getBlockFromCursor(cursor)
 }
 
 const onMousemove = (e: MouseEvent): void => {
@@ -116,15 +142,48 @@ const onMouseup = (e: MouseEvent): void => {
 }
 
 const onKeyDown = (e: KeyboardEvent): void => {
+    // start the audio context on the first keydown
+    if (!audioStarted) {
+        audioCtx = new AudioContext()
+        audioStarted = true
+    }
+
     let key: string
+    let block: Block
     switch (e.keyCode) {
         case 81: // Q
             key = `${selected.x},${selected.y}`
-            blocks.set(key, {color: '#c6e1ff'}) // light blue
+            block = {
+                color: '#c6e1ff', // light blue
+                source: new OscillatorNode(audioCtx, {
+                    frequency: 220,
+                    type: "triangle"
+                }),
+                gain: audioCtx.createGain()
+            }
+            initializeBlock(block)
+            blocks.set(key, block)
             break
         case 87: // W
             key = `${selected.x},${selected.y}`
-            blocks.set(key, {color: '#ffe29f'}) // light orange
+            block = {
+                color: '#ffe29f', // light orange
+                source: new OscillatorNode(audioCtx, {
+                    frequency: 440,
+                    type: "sine"
+                }),
+                gain: audioCtx.createGain()
+            }
+            initializeBlock(block)
+            blocks.set(key, block)
+            break
+        case 13: // Enter
+            key = `${selected.x},${selected.y}`
+            if (!blocks.has(key)) {
+                return
+            }
+            block = blocks.get(key)
+            playSound(block)
             break
         case 32:
             holdSpace = true
