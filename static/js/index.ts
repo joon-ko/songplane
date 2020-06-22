@@ -2,12 +2,13 @@ const canvas = <HTMLCanvasElement> document.getElementById('canvas')
 const ctx = <CanvasRenderingContext2D> canvas.getContext('2d')
 const info = <HTMLElement> document.getElementById('info')
 
-const FONT_SIZE = 20
+const FONT_SIZE = 14
 const CAMERA_SPEED = 5 // px/frame
 
 const LIGHT_BLUE = '#c6e1ff'
 const LIGHT_ORANGE = '#ffe29f'
 const LIGHT_GREEN = 'rgb(186, 255, 184)'
+const LIGHT_PURPLE = 'rgb(208, 144, 248)'
 
 interface Point {
     x: number,
@@ -17,6 +18,11 @@ interface Point {
 interface Size {
     w: number, // width
     h: number  // height
+}
+
+interface SongMarker {
+    pos: Point,
+    alpha: number
 }
 
 let blocks: Map<string, Block> = new Map()
@@ -30,6 +36,10 @@ let magnitude: Size
 let holdPoint: Point = null
 let oldCamera: Point = null
 let selected: Point = {x: 0, y: 0}
+let connectMode = false
+
+let frame = 0
+let songMarker: SongMarker = null
 
 // [space, left, up, right, down]
 let holdArray = [false, false, false, false, false]
@@ -131,7 +141,7 @@ const onKeyDown = (e: KeyboardEvent): void => {
     }
 
     const key = `${selected.x},${selected.y}`
-    if (e.keyCode === 81) {
+    if (e.keyCode === 81) { // Q
         if (!blocks.has(key)) {
             const options = {
                 canvas: ctx,
@@ -148,7 +158,7 @@ const onKeyDown = (e: KeyboardEvent): void => {
             block.source.type = 'sawtooth'
         }
     }
-    if (e.keyCode === 87) {
+    if (e.keyCode === 87) { // W
         if (!blocks.has(key)) {
             const options = {
                 canvas: ctx,
@@ -170,6 +180,10 @@ const onKeyDown = (e: KeyboardEvent): void => {
             return
         }
         blocks.get(key).playSound()
+        songMarker = {pos: selected, alpha: 1.0}
+    }
+    if (e.keyCode === 67) { // C
+        connectMode = true
     }
 
     for (let i = 0; i < holdArray.length; i++) {
@@ -181,6 +195,10 @@ const onKeyDown = (e: KeyboardEvent): void => {
 }
 
 const onKeyUp = (e: KeyboardEvent): void => {
+    if (e.keyCode === 67) { // C
+        connectMode = false
+    }
+
     for (let i = 0; i < holdArray.length; i++) {
         const codes = [32, 37, 38, 39, 40]
         if (e.keyCode === codes[i]) {
@@ -196,6 +214,22 @@ document.addEventListener('keydown', onKeyDown)
 document.addEventListener('keyup', onKeyUp)
 
 ///////////////////////////////////////////////////////////////////////////////
+
+// get a list of block coordinate neighbors
+const getNeighbors = (pos: Point): Point[] => {
+    const ret: Point[] = []
+    for (let i of [-1, 0, 1]) {
+        for (let j of [-1, 0, 1]) {
+            if (i === 0 && j === 0) {
+                continue
+            }
+            const key = `${selected.x + i},${selected.y + j}`
+            if (blocks.has(key))
+            ret.push({x: selected.x + i, y: selected.y + j})
+        }
+    }
+    return ret
+}
 
 // converts a block coordinate into the position on the canvas from which it should be drawn.
 const blockToCanvas = (blockPoint: Point): Point => {
@@ -216,12 +250,19 @@ const drawBorders = (pos: Point, text: string): void => {
     ctx.strokeStyle = 'black'
     ctx.lineWidth = 1.0
 
-    const textWidth = ctx.measureText(text).width
     const realTextPos = [
-        pos.x + 50 - (textWidth/2),
-        pos.y + 50
+        pos.x + 5,
+        pos.y + 5 + FONT_SIZE
     ]
     ctx.fillText(text, realTextPos[0], realTextPos[1])
+}
+
+const drawThickBorder = (pos: Point, color: string): void => {
+    ctx.strokeStyle = color
+    ctx.lineWidth = 4.0
+    ctx.strokeRect(pos.x + 3, pos.y + 3, 94, 94) // draw inside the box
+    ctx.strokeStyle = 'black'
+    ctx.lineWidth = 1.0
 }
 
 const draw = (): void => {
@@ -246,13 +287,40 @@ const draw = (): void => {
         }
     }
 
+    // draw song indicator
+    if (songMarker !== null) {
+        let markerPos = blockToCanvas(songMarker.pos)
+        markerPos = {x: markerPos.x + 50, y: markerPos.y + 50}
+
+        ctx.beginPath()
+        ctx.arc(markerPos.x, markerPos.y, 20, 0, 2*Math.PI, true)
+        ctx.globalAlpha = songMarker.alpha
+        ctx.fill()
+
+        songMarker.alpha -= (1/30)
+        if (songMarker.alpha <= 0) {
+            songMarker = null
+        }
+        ctx.globalAlpha = 1.0
+    }
+
     // draw a 'selected' border around the selected block
     const canvasPos = blockToCanvas(selected)
-    ctx.strokeStyle = LIGHT_GREEN
-    ctx.lineWidth = 5.0
-    ctx.strokeRect(canvasPos.x, canvasPos.y, 100, 100)
-    ctx.strokeStyle = 'black'
-    ctx.lineWidth = 1.0
+    drawThickBorder(canvasPos, LIGHT_GREEN)
+
+    // draw neighbor blocks that can be connected
+    // only valid blocks can be connected to other valid blocks
+    if (connectMode) {
+        const key = `${selected.x},${selected.y}`
+        if (!blocks.has(key)) {
+            return
+        }
+        const neighbors = getNeighbors(selected)
+        for (let neighbor of neighbors) {
+            const canvasPos = blockToCanvas(neighbor)
+            drawThickBorder(canvasPos, LIGHT_PURPLE)
+        }
+    }
 }
 
 const moveCamera = (): void => {
@@ -274,12 +342,14 @@ const renderInfo = (): void => {
     let key = `${selected.x},${selected.y}`
     const colorText = blocks.has(key) ? blocks.get(key).color : ''
     info.innerHTML = `
+        <div>frame: ${frame}</div>
         <div>selected: (${selected.x}, ${selected.y})</div>
-        <div>color: ${colorText}</div>
+        <div>connect mode: ${connectMode}</div>
     `
 }
 
 window.setInterval(() => {
+    frame += 1
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     draw()
     moveCamera()
