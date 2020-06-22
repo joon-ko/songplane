@@ -5,6 +5,10 @@ const info = <HTMLElement> document.getElementById('info')
 const FONT_SIZE = 20
 const CAMERA_SPEED = 5 // px/frame
 
+const LIGHT_BLUE = '#c6e1ff'
+const LIGHT_ORANGE = '#ffe29f'
+const LIGHT_GREEN = 'rgb(186, 255, 184)'
+
 interface Point {
     x: number,
     y: number
@@ -13,13 +17,6 @@ interface Point {
 interface Size {
     w: number, // width
     h: number  // height
-}
-
-interface Block {
-    color: string,
-    source: OscillatorNode,
-    gain: GainNode,
-    pitch?: number
 }
 
 let blocks: Map<string, Block> = new Map()
@@ -34,11 +31,9 @@ let holdPoint: Point = null
 let oldCamera: Point = null
 let selected: Point = {x: 0, y: 0}
 
-let holdSpace = false
-let holdLeft = false
-let holdRight = false
-let holdDown = false
-let holdUp = false
+// [space, left, up, right, down]
+let holdArray = [false, false, false, false, false]
+enum Key { Space = 0, Left, Up, Right, Down }
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -89,19 +84,6 @@ const getBlockFromCursor = (cursor: Point): Point => {
     }
 }
 
-const initializeBlock = (block: Block): void => {
-    block.gain.gain.value = 0
-    block.source.connect(block.gain)
-    block.gain.connect(audioCtx.destination)
-    block.source.start()
-}
-
-const playSound = (block: Block): void => {
-    block.gain.gain.cancelScheduledValues(audioCtx.currentTime)
-    block.gain.gain.setValueCurveAtTime([0, 0.2], audioCtx.currentTime, 0.005)
-    block.gain.gain.setValueCurveAtTime([0.2, 0], audioCtx.currentTime + 0.005, 0.5 - 0.005)
-}
-
 const onMousedown = (e: MouseEvent): void => {
     // start the audio context on the first click
     if (!audioStarted) {
@@ -110,7 +92,7 @@ const onMousedown = (e: MouseEvent): void => {
     }
 
     // if spacebar is held, start dragging the camera view
-    if (holdSpace) {
+    if (holdArray[Key.Space]) {
         holdPoint = getCursorPosition(e)
         oldCamera = camera
         return
@@ -134,7 +116,7 @@ const onMousemove = (e: MouseEvent): void => {
 }
 
 const onMouseup = (e: MouseEvent): void => {
-    if (!holdSpace) {
+    if (!holdArray[Key.Space]) { // not holding space
         return
     }
     holdPoint = null
@@ -148,78 +130,62 @@ const onKeyDown = (e: KeyboardEvent): void => {
         audioStarted = true
     }
 
-    let key: string
-    let block: Block
-    switch (e.keyCode) {
-        case 81: // Q
-            key = `${selected.x},${selected.y}`
-            block = {
-                color: '#c6e1ff', // light blue
-                source: new OscillatorNode(audioCtx, {
-                    frequency: 220,
-                    type: "triangle"
-                }),
-                gain: audioCtx.createGain()
+    const key = `${selected.x},${selected.y}`
+    if (e.keyCode === 81) {
+        if (!blocks.has(key)) {
+            const options = {
+                canvas: ctx,
+                audio: audioCtx,
+                color: LIGHT_BLUE,
+                frequency: 220,
+                type: 'sawtooth' as OscillatorType
             }
-            initializeBlock(block)
-            blocks.set(key, block)
-            break
-        case 87: // W
-            key = `${selected.x},${selected.y}`
-            block = {
-                color: '#ffe29f', // light orange
-                source: new OscillatorNode(audioCtx, {
-                    frequency: 440,
-                    type: "sine"
-                }),
-                gain: audioCtx.createGain()
+            blocks.set(key, new Block(options))
+        } else {
+            const block = blocks.get(key)
+            block.color = LIGHT_BLUE
+            block.source.frequency.value = 220
+            block.source.type = 'sawtooth'
+        }
+    }
+    if (e.keyCode === 87) {
+        if (!blocks.has(key)) {
+            const options = {
+                canvas: ctx,
+                audio: audioCtx,
+                color: LIGHT_ORANGE,
+                frequency: 440,
+                type: 'sine' as OscillatorType
             }
-            initializeBlock(block)
-            blocks.set(key, block)
-            break
-        case 13: // Enter
-            key = `${selected.x},${selected.y}`
-            if (!blocks.has(key)) {
-                return
-            }
-            block = blocks.get(key)
-            playSound(block)
-            break
-        case 32:
-            holdSpace = true
-            break
-        case 37:
-            holdLeft = true
-            break
-        case 38:
-            holdUp = true
-            break
-        case 39:
-            holdRight = true
-            break
-        case 40:
-            holdDown = true
-            break
+            blocks.set(key, new Block(options))
+        } else {
+            const block = blocks.get(key)
+            block.color = LIGHT_ORANGE
+            block.source.frequency.value = 440
+            block.source.type = 'sine'
+        }
+    }
+    if (e.keyCode === 13) {
+        if (!blocks.has(key)) {
+            return
+        }
+        blocks.get(key).playSound()
+    }
+
+    for (let i = 0; i < holdArray.length; i++) {
+        const codes = [32, 37, 38, 39, 40]
+        if (e.keyCode === codes[i]) {
+            holdArray[i] = true
+        }
     }
 }
 
 const onKeyUp = (e: KeyboardEvent): void => {
-    switch (e.keyCode) {
-        case 32:
-            holdSpace = false
-            break
-        case 37:
-            holdLeft = false
-            break
-        case 38:
-            holdUp = false
-            break
-        case 39:
-            holdRight = false
-            break
-        case 40:
-            holdDown = false
-            break
+    for (let i = 0; i < holdArray.length; i++) {
+        const codes = [32, 37, 38, 39, 40]
+        if (e.keyCode === codes[i]) {
+            holdArray[i] = false
+        }
     }
 }
 
@@ -232,8 +198,8 @@ document.addEventListener('keyup', onKeyUp)
 ///////////////////////////////////////////////////////////////////////////////
 
 // converts a block coordinate into the position on the canvas from which it should be drawn.
-const blockToCanvasPos = (i: number, j: number): Point => {
-    let center: Point = {x: 100*i, y: 100*j}
+const blockToCanvas = (blockPoint: Point): Point => {
+    let center: Point = {x: 100*blockPoint.x, y: 100*blockPoint.y}
     let vector: Size = {
         w: center.x - 50 - camera.x,
         h: center.y + 50 - camera.y
@@ -244,12 +210,12 @@ const blockToCanvasPos = (i: number, j: number): Point => {
     }
 }
 
-const drawBorders = (pos: Point, i: number, j: number): void => {
+// draw the block border, along with supplemental info
+const drawBorders = (pos: Point, text: string): void => {
     ctx.strokeRect(pos.x, pos.y, 100, 100)
     ctx.strokeStyle = 'black'
     ctx.lineWidth = 1.0
 
-    const text = `(${i}, ${j})`
     const textWidth = ctx.measureText(text).width
     const realTextPos = [
         pos.x + 50 - (textWidth/2),
@@ -258,26 +224,12 @@ const drawBorders = (pos: Point, i: number, j: number): void => {
     ctx.fillText(text, realTextPos[0], realTextPos[1])
 }
 
-const drawBlock = (pos: Point, block: Block): void => {
-    ctx.fillStyle = block.color
-    ctx.fillRect(pos.x, pos.y, 100, 100)
-    ctx.fillStyle = 'black'
-}
-
-const drawSelectedBorder = (pos: Point): void => {
-    ctx.strokeStyle = 'rgb(186, 255, 184)'
-    ctx.lineWidth = 5.0
-    ctx.strokeRect(pos.x, pos.y, 100, 100)
-    ctx.strokeStyle = 'black'
-    ctx.lineWidth = 1.0
-}
-
 const draw = (): void => {
     // draw existing blocks first
     for (let key of blocks.keys()) {
         const pos = key.split(',').map(Number)
-        const canvasPos = blockToCanvasPos(pos[0], pos[1])
-        drawBlock(canvasPos, blocks.get(key))
+        const canvasPos = blockToCanvas({x: pos[0], y: pos[1]})
+        blocks.get(key).draw(canvasPos)
     }
 
     // then fill in with borders, info
@@ -289,32 +241,33 @@ const draw = (): void => {
     const [lowY, highY] = [cameraBlock.y - magnitude.h, cameraBlock.y + magnitude.h]
     for (let i = lowX; i <= highX; i++) {
         for (let j = lowY; j <= highY; j++) {
-            const canvasPos = blockToCanvasPos(i, j)
-            drawBorders(canvasPos, i, j)
+            const canvasPos = blockToCanvas({x: i, y: j})
+            drawBorders(canvasPos, `(${i}, ${j})`)
         }
     }
 
-    // redraw the border around the selected block
-    const canvasPos = blockToCanvasPos(selected.x, selected.y)
-    drawSelectedBorder(canvasPos)
+    // draw a 'selected' border around the selected block
+    const canvasPos = blockToCanvas(selected)
+    ctx.strokeStyle = LIGHT_GREEN
+    ctx.lineWidth = 5.0
+    ctx.strokeRect(canvasPos.x, canvasPos.y, 100, 100)
+    ctx.strokeStyle = 'black'
+    ctx.lineWidth = 1.0
 }
 
 const moveCamera = (): void => {
-    let cameraSpeed = [0, 0]
-    if (holdLeft) {
-        cameraSpeed[0] -= CAMERA_SPEED
+    if (holdArray[Key.Left]) {
+        camera.x -= CAMERA_SPEED
     }
-    if (holdUp) {
-        cameraSpeed[1] += CAMERA_SPEED
+    if (holdArray[Key.Up]) {
+        camera.y += CAMERA_SPEED
     }
-    if (holdRight) {
-        cameraSpeed[0] += CAMERA_SPEED
+    if (holdArray[Key.Right]) {
+        camera.x += CAMERA_SPEED
     }
-    if (holdDown) {
-        cameraSpeed[1] -= CAMERA_SPEED
+    if (holdArray[Key.Down]) {
+        camera.y -= CAMERA_SPEED
     }
-    camera.x += cameraSpeed[0]
-    camera.y += cameraSpeed[1]
 }
 
 const renderInfo = (): void => {

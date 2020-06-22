@@ -1,3 +1,5 @@
 .DS_Store
-static/index.js
 .vscode/
+
+static/js/block.js
+static/js/index.js

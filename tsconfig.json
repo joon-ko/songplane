@@ -1,10 +1,11 @@
 {
     "compilerOptions": {
-        "outFile": "./static/index.js",
+        "outDir": "static/js",
         "module": "None",
         "target": "ESNext"
     },
     "files": [
-        "static/index.ts"
+        "static/js/block.ts",
+        "static/js/index.ts"
     ]
 }
