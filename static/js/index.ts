@@ -25,7 +25,7 @@ interface SongMarker {
     alpha: number
 }
 
-let blocks: Map<string, Block> = new Map()
+let blocks = new BlockMap()
 let audioCtx: AudioContext = null
 let audioStarted = false
 
@@ -108,9 +108,22 @@ const onMousedown = (e: MouseEvent): void => {
         return
     }
 
-    // if just a normal click, select the clicked block
     const cursor = getCursorPosition(e)
-    selected = getBlockFromCursor(cursor)
+    const blockP = getBlockFromCursor(cursor)
+
+    // if a neighbor is clicked, make a connection
+    if (connectMode) {
+        const neighbors = getNeighbors(selected)
+        for (let neighbor of neighbors) {
+            if (blockP.x === neighbor.x && blockP.y === neighbor.y) {
+                const fromBlock = blocks.get(selected)
+                const toBlock = blocks.get(neighbor)
+                fromBlock.connect(toBlock)
+            }
+        }
+    }
+
+    selected = blockP
 }
 
 const onMousemove = (e: MouseEvent): void => {
@@ -140,68 +153,69 @@ const onKeyDown = (e: KeyboardEvent): void => {
         audioStarted = true
     }
 
-    const key = `${selected.x},${selected.y}`
-    if (e.keyCode === 81) { // Q
-        if (!blocks.has(key)) {
+    if (e.key === 'q') {
+        if (!blocks.has(selected)) {
             const options = {
+                pos: selected,
                 canvas: ctx,
                 audio: audioCtx,
                 color: LIGHT_BLUE,
                 frequency: 220,
                 type: 'sawtooth' as OscillatorType
             }
-            blocks.set(key, new Block(options))
+            blocks.set(selected, new Block(options))
         } else {
-            const block = blocks.get(key)
+            const block = blocks.get(selected)
             block.color = LIGHT_BLUE
             block.source.frequency.value = 220
             block.source.type = 'sawtooth'
         }
     }
-    if (e.keyCode === 87) { // W
-        if (!blocks.has(key)) {
+    if (e.key === 'w') {
+        if (!blocks.has(selected)) {
             const options = {
+                pos: selected,
                 canvas: ctx,
                 audio: audioCtx,
                 color: LIGHT_ORANGE,
                 frequency: 440,
                 type: 'sine' as OscillatorType
             }
-            blocks.set(key, new Block(options))
+            blocks.set(selected, new Block(options))
         } else {
-            const block = blocks.get(key)
+            const block = blocks.get(selected)
             block.color = LIGHT_ORANGE
             block.source.frequency.value = 440
             block.source.type = 'sine'
         }
     }
-    if (e.keyCode === 13) {
-        if (!blocks.has(key)) {
+    if (e.key === 'Enter') {
+        if (!blocks.has(selected)) {
             return
         }
-        blocks.get(key).playSound()
+        blocks.get(selected).playSound()
         songMarker = {pos: selected, alpha: 1.0}
     }
-    if (e.keyCode === 67) { // C
+    if (e.key === 'c') {
         connectMode = true
     }
 
     for (let i = 0; i < holdArray.length; i++) {
-        const codes = [32, 37, 38, 39, 40]
-        if (e.keyCode === codes[i]) {
+        const keys = [' ', 'ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown']
+        if (e.key === keys[i]) {
             holdArray[i] = true
         }
     }
 }
 
 const onKeyUp = (e: KeyboardEvent): void => {
-    if (e.keyCode === 67) { // C
+    if (e.key === 'c') { // C
         connectMode = false
     }
 
     for (let i = 0; i < holdArray.length; i++) {
-        const codes = [32, 37, 38, 39, 40]
-        if (e.keyCode === codes[i]) {
+        const keys = [' ', 'ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown']
+        if (e.key === keys[i]) {
             holdArray[i] = false
         }
     }
@@ -218,14 +232,18 @@ document.addEventListener('keyup', onKeyUp)
 // get a list of block coordinate neighbors
 const getNeighbors = (pos: Point): Point[] => {
     const ret: Point[] = []
+    // if the current point isn't a valid block, return no neighbors
+    if (!blocks.has(pos)) {
+        return ret
+    }
     for (let i of [-1, 0, 1]) {
         for (let j of [-1, 0, 1]) {
             if (i === 0 && j === 0) {
                 continue
             }
-            const key = `${selected.x + i},${selected.y + j}`
+            const key = {x: selected.x + i, y: selected.y + j}
             if (blocks.has(key))
-            ret.push({x: selected.x + i, y: selected.y + j})
+            ret.push(key)
         }
     }
     return ret
@@ -268,8 +286,7 @@ const drawThickBorder = (pos: Point, color: string): void => {
 const draw = (): void => {
     // draw existing blocks first
     for (let key of blocks.keys()) {
-        const pos = key.split(',').map(Number)
-        const canvasPos = blockToCanvas({x: pos[0], y: pos[1]})
+        const canvasPos = blockToCanvas(key)
         blocks.get(key).draw(canvasPos)
     }
 
@@ -311,10 +328,6 @@ const draw = (): void => {
     // draw neighbor blocks that can be connected
     // only valid blocks can be connected to other valid blocks
     if (connectMode) {
-        const key = `${selected.x},${selected.y}`
-        if (!blocks.has(key)) {
-            return
-        }
         const neighbors = getNeighbors(selected)
         for (let neighbor of neighbors) {
             const canvasPos = blockToCanvas(neighbor)
@@ -339,8 +352,7 @@ const moveCamera = (): void => {
 }
 
 const renderInfo = (): void => {
-    let key = `${selected.x},${selected.y}`
-    const colorText = blocks.has(key) ? blocks.get(key).color : ''
+    const colorText = blocks.has(selected) ? blocks.get(selected).color : ''
     info.innerHTML = `
         <div>frame: ${frame}</div>
         <div>selected: (${selected.x}, ${selected.y})</div>

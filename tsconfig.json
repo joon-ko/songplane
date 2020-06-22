@@ -6,6 +6,7 @@
     },
     "files": [
         "static/js/block.ts",
-        "static/js/index.ts"
+        "static/js/index.ts",
+        "static/js/utils.ts"
     ]
 }

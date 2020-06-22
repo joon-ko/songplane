@@ -1,5 +1,4 @@
 .DS_Store
 .vscode/
 
-static/js/block.js
-static/js/index.js
+static/js/*.js

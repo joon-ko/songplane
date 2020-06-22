@@ -1,4 +1,5 @@
 interface Options {
+    pos: Point,
     canvas: CanvasRenderingContext2D,
     audio: AudioContext,
 
@@ -8,6 +9,7 @@ interface Options {
 }
 
 class Block {
+    pos: Point
     canvas: CanvasRenderingContext2D
     audio: AudioContext
     source: OscillatorNode
@@ -16,12 +18,15 @@ class Block {
     color: string
     frequency: number
     type: OscillatorType
+    connections: Block[]
 
     constructor(options: Options) {
         this.color = (options.color !== undefined) ? options.color : 'pink'
         this.frequency = (options.frequency !== undefined) ? options.frequency : 440
         this.type = (options.type !== undefined) ? options.type : 'sine'
+        this.connections = []
 
+        this.pos = options.pos
         this.canvas = options.canvas
         this.audio = options.audio
         this.source = new OscillatorNode(this.audio, {
@@ -47,5 +52,10 @@ class Block {
         this.canvas.fillStyle = this.color
         this.canvas.fillRect(pos.x, pos.y, 100, 100)
         this.canvas.fillStyle = 'black'
+    }
+
+    connect(block: Block): void {
+        this.connections.push(block)
+        console.log(this.connections)
     }
 }
