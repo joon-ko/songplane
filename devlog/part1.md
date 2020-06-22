@@ -1,5 +1,8 @@
 june 19, 2020
 
+* **part 1**
+* [part 2](part2.md)
+
 ## devlog for songplane
 
 i haven't done a devlog before, but it's something i've seen some of my friends do and i think it'll be interesting to read looking back!
@@ -10,7 +13,7 @@ while dozing off at my desk watching pikmin speedruns such as [this one](https:/
 
 you could connect the tiles together somehow and then drop some sort of indicator, like a marble, onto a tile, which bounces from tile to tile, playing a melody.
 
-i'm deciding to use go and typescript since i need to learn both for a job i'm moving to boston for in less than two weeks. i spent most of yesterday learning about go's [net/http](https://golang.org/pkg/net/http/) package and doing their well-written tutorial on [web apps](https://golang.org/doc/articles/wiki/). i'm using [gin](https://github.com/gin-gonic/gin), a web framework that has nice logging middlewware, and also my job uses it.
+i'm deciding to use go and typescript since i need to learn both for a job i'm moving to boston for in less than two weeks. i spent most of yesterday learning about go's [net/http](https://golang.org/pkg/net/http/) package and doing their well-written tutorial on [web apps](https://golang.org/doc/articles/wiki/). i'm using [gin](https://github.com/gin-gonic/gin), a web framework that has nice logging middleware, and also my job uses it.
 
 ### cameras, coordinate axes, and canvas (oh my!)
 
