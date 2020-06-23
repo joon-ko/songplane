@@ -10,12 +10,14 @@ interface Options {
 
 interface Connection {
     direction: string,
+    red: number,
     block: Block
 }
 
 interface SongMarker {
     pos: Point,
-    alpha: number
+    alpha: number,
+    red: number
 }
 
 class Block {
@@ -41,7 +43,7 @@ class Block {
         this.connections = []
 
         this.pos = options.pos
-        this.marker = {pos: this.pos, alpha: 0}
+        this.marker = {pos: this.pos, alpha: 0, red: 0}
         this.playing = false
         this.kill = false
 
@@ -71,6 +73,7 @@ class Block {
 
         window.setTimeout((): void => {
             for (let c of this.connections) {
+                c.red = 255
                 c.block.playSound()
             }
         }, 500)
@@ -106,7 +109,8 @@ class Block {
 
         this.connections.push({
             direction: direction,
-            block: block
+            block: block,
+            red: 0
         })
     }
 
@@ -117,18 +121,22 @@ class Block {
     drawConnections(pos: Point): void {
         // draw any connections
         for (let c of this.connections) {
+            if (c.red > 0) {
+                c.red = Math.max(0, c.red - (255/30))
+            }
+            const fill = `rgb(${c.red}, 0, 0)`
             switch (c.direction) {
                 case 'down':
-                    this._drawDownConnection(pos)
+                    this._drawDownConnection(pos, fill)
                     break
                 case 'up':
-                    this._drawUpConnection(pos)
+                    this._drawUpConnection(pos, fill)
                     break
                 case 'right':
-                    this._drawRightConnection(pos)
+                    this._drawRightConnection(pos, fill)
                     break
                 case 'left':
-                    this._drawLeftConnection(pos)
+                    this._drawLeftConnection(pos, fill)
                     break
             }
         }
@@ -148,40 +156,42 @@ class Block {
         this.canvas.globalAlpha = 1.0
     }
 
-    _drawDownConnection = (pos: Point): void => {
+    _drawDownConnection = (pos: Point, fill: string): void => {
         const p1 = {x: pos.x + 35, y: pos.y + 100}
         const p2 = {x: p1.x + 30, y: p1.y}
         const p3 = {x: p2.x - 15, y: p2.y + 15}
-        this._drawConnection(p1, p2, p3)
+        this._drawConnection(fill, p1, p2, p3)
     }
 
-    _drawUpConnection = (pos: Point): void => {
+    _drawUpConnection = (pos: Point, fill: string): void => {
         const p1 = {x: pos.x + 35, y: pos.y}
         const p2 = {x: p1.x + 30, y: p1.y}
         const p3 = {x: p2.x - 15, y: p2.y - 15}
-        this._drawConnection(p1, p2, p3)
+        this._drawConnection(fill, p1, p2, p3)
     }
 
-    _drawLeftConnection = (pos: Point): void => {
+    _drawLeftConnection = (pos: Point, fill: string): void => {
         const p1 = {x: pos.x, y: pos.y + 35}
         const p2 = {x: p1.x, y: p1.y + 30}
         const p3 = {x: p2.x - 15, y: p2.y - 15}
-        this._drawConnection(p1, p2, p3)
+        this._drawConnection(fill, p1, p2, p3)
     }
 
-    _drawRightConnection = (pos: Point): void => {
+    _drawRightConnection = (pos: Point, fill: string): void => {
         const p1 = {x: pos.x + 100, y: pos.y + 35}
         const p2 = {x: p1.x, y: p1.y + 30}
         const p3 = {x: p2.x + 15, y: p2.y - 15}
-        this._drawConnection(p1, p2, p3)
+        this._drawConnection(fill, p1, p2, p3)
     }
 
-    _drawConnection = (p1: Point, p2: Point, p3: Point): void => {
+    _drawConnection = (fill: string, p1: Point, p2: Point, p3: Point): void => {
+        this.canvas.fillStyle = fill
         this.canvas.beginPath()
         this.canvas.moveTo(p1.x, p1.y)
         this.canvas.lineTo(p2.x, p2.y)
         this.canvas.lineTo(p3.x, p3.y)
         this.canvas.lineTo(p1.x, p1.y)
         this.canvas.fill()
+        this.canvas.fillStyle = 'black'
     }
 }

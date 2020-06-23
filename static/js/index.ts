@@ -34,7 +34,6 @@ let selected: Point = {x: 0, y: 0}
 let connectMode = false
 
 let frame = 0
-let songMarker: SongMarker = null
 
 // [space, left, up, right, down]
 let holdArray = [false, false, false, false, false]
@@ -189,7 +188,6 @@ const onKeyDown = (e: KeyboardEvent): void => {
             return
         }
         blocks.get(selected).playSound()
-        songMarker = {pos: selected, alpha: 1.0}
     }
     if (e.key === 'c') {
         connectMode = true
