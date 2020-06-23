@@ -8,6 +8,11 @@ interface Options {
     type?: OscillatorType
 }
 
+interface Connection {
+    direction: string,
+    block: Block
+}
+
 class Block {
     pos: Point
     canvas: CanvasRenderingContext2D
@@ -18,7 +23,7 @@ class Block {
     color: string
     frequency: number
     type: OscillatorType
-    connections: Block[]
+    connections: Connection[]
 
     constructor(options: Options) {
         this.color = (options.color !== undefined) ? options.color : 'pink'
@@ -55,7 +60,75 @@ class Block {
     }
 
     connect(block: Block): void {
-        this.connections.push(block)
-        console.log(this.connections)
+        // do some math to figure out the connection direction
+        let direction: string = null
+        const [toX, toY] = [block.pos.x, block.pos.y]
+        const [fromX, fromY] = [this.pos.x, this.pos.y]
+        if (toY < fromY) direction = 'down';
+        else if (toY > fromY) direction = 'up';
+        else if (toX > fromX) direction = 'right';
+        else if (toX < fromX) direction = 'left';
+
+        this.connections.push({
+            direction: direction,
+            block: block
+        })
+    }
+
+    drawConnections(pos: Point): void {
+        // draw any connections
+        for (let c of this.connections) {
+            switch (c.direction) {
+                case 'down':
+                    this._drawDownConnection(pos)
+                    break
+                case 'up':
+                    this._drawUpConnection(pos)
+                    break
+                case 'right':
+                    this._drawRightConnection(pos)
+                    break
+                case 'left':
+                    this._drawLeftConnection(pos)
+                    break
+            }
+        }
+    }
+
+    _drawDownConnection = (pos: Point): void => {
+        const p1 = {x: pos.x + 35, y: pos.y + 100}
+        const p2 = {x: p1.x + 30, y: p1.y}
+        const p3 = {x: p2.x - 15, y: p2.y + 15}
+        this._drawConnection(p1, p2, p3)
+    }
+
+    _drawUpConnection = (pos: Point): void => {
+        const p1 = {x: pos.x + 35, y: pos.y}
+        const p2 = {x: p1.x + 30, y: p1.y}
+        const p3 = {x: p2.x - 15, y: p2.y - 15}
+        this._drawConnection(p1, p2, p3)
+    }
+
+    _drawLeftConnection = (pos: Point): void => {
+        const p1 = {x: pos.x, y: pos.y + 35}
+        const p2 = {x: p1.x, y: p1.y + 30}
+        const p3 = {x: p2.x - 15, y: p2.y - 15}
+        this._drawConnection(p1, p2, p3)
+    }
+
+    _drawRightConnection = (pos: Point): void => {
+        const p1 = {x: pos.x + 100, y: pos.y + 35}
+        const p2 = {x: p1.x, y: p1.y + 30}
+        const p3 = {x: p2.x + 15, y: p2.y - 15}
+        this._drawConnection(p1, p2, p3)
+    }
+
+    _drawConnection = (p1: Point, p2: Point, p3: Point): void => {
+        this.canvas.beginPath()
+        this.canvas.moveTo(p1.x, p1.y)
+        this.canvas.lineTo(p2.x, p2.y)
+        this.canvas.lineTo(p3.x, p3.y)
+        this.canvas.lineTo(p1.x, p1.y)
+        this.canvas.fill()
     }
 }

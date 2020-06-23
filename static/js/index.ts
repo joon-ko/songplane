@@ -236,15 +236,10 @@ const getNeighbors = (pos: Point): Point[] => {
     if (!blocks.has(pos)) {
         return ret
     }
-    for (let i of [-1, 0, 1]) {
-        for (let j of [-1, 0, 1]) {
-            if (i === 0 && j === 0) {
-                continue
-            }
-            const key = {x: selected.x + i, y: selected.y + j}
-            if (blocks.has(key))
-            ret.push(key)
-        }
+    for (let [i, j] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const key = {x: selected.x + i, y: selected.y + j}
+        if (blocks.has(key))
+        ret.push(key)
     }
     return ret
 }
@@ -333,6 +328,12 @@ const draw = (): void => {
             const canvasPos = blockToCanvas(neighbor)
             drawThickBorder(canvasPos, LIGHT_PURPLE)
         }
+    }
+
+    // finally, draw connections
+    for (let key of blocks.keys()) {
+        const canvasPos = blockToCanvas(key)
+        blocks.get(key).drawConnections(canvasPos)
     }
 }
 
