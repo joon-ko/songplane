@@ -20,11 +20,6 @@ interface Size {
     h: number  // height
 }
 
-interface SongMarker {
-    pos: Point,
-    alpha: number
-}
-
 let blocks = new BlockMap()
 let audioCtx: AudioContext = null
 let audioStarted = false
@@ -199,6 +194,14 @@ const onKeyDown = (e: KeyboardEvent): void => {
     if (e.key === 'c') {
         connectMode = true
     }
+    if (e.key === 'd') {
+        if (blocks.has(selected)) {
+            blocks.get(selected).clearConnections()
+        }
+    }
+    if (e.key === 'Backspace') {
+        blocks.clear()
+    }
 
     for (let i = 0; i < holdArray.length; i++) {
         const keys = [' ', 'ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown']
@@ -297,23 +300,6 @@ const draw = (): void => {
             const canvasPos = blockToCanvas({x: i, y: j})
             drawBorders(canvasPos, `(${i}, ${j})`)
         }
-    }
-
-    // draw song indicator
-    if (songMarker !== null) {
-        let markerPos = blockToCanvas(songMarker.pos)
-        markerPos = {x: markerPos.x + 50, y: markerPos.y + 50}
-
-        ctx.beginPath()
-        ctx.arc(markerPos.x, markerPos.y, 20, 0, 2*Math.PI, true)
-        ctx.globalAlpha = songMarker.alpha
-        ctx.fill()
-
-        songMarker.alpha -= (1/30)
-        if (songMarker.alpha <= 0) {
-            songMarker = null
-        }
-        ctx.globalAlpha = 1.0
     }
 
     // draw a 'selected' border around the selected block

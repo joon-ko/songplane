@@ -29,4 +29,11 @@ class BlockMap {
         }
         return ret
     }
+
+    clear(): void {
+        for (let block of this.map.values()) {
+            block.kill = true
+        }
+        this.map.clear()
+    }
 }

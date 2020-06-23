@@ -13,8 +13,17 @@ interface Connection {
     block: Block
 }
 
+interface SongMarker {
+    pos: Point,
+    alpha: number
+}
+
 class Block {
     pos: Point
+    marker: SongMarker
+    playing: boolean
+    kill: boolean
+
     canvas: CanvasRenderingContext2D
     audio: AudioContext
     source: OscillatorNode
@@ -32,6 +41,10 @@ class Block {
         this.connections = []
 
         this.pos = options.pos
+        this.marker = {pos: this.pos, alpha: 0}
+        this.playing = false
+        this.kill = false
+
         this.canvas = options.canvas
         this.audio = options.audio
         this.source = new OscillatorNode(this.audio, {
@@ -47,9 +60,20 @@ class Block {
     }
 
     playSound(): void {
+        if (this.kill) {
+            return
+        }
         this.volume.gain.cancelScheduledValues(audioCtx.currentTime)
         this.volume.gain.setValueCurveAtTime([0, 0.2], audioCtx.currentTime, 0.005)
         this.volume.gain.setValueCurveAtTime([0.2, 0], audioCtx.currentTime + 0.005, 0.5 - 0.005)
+        this.marker.alpha = 1.0
+        this.playing = true
+
+        window.setTimeout((): void => {
+            for (let c of this.connections) {
+                c.block.playSound()
+            }
+        }, 500)
     }
 
     // draw the inside of the block
@@ -57,9 +81,20 @@ class Block {
         this.canvas.fillStyle = this.color
         this.canvas.fillRect(pos.x, pos.y, 100, 100)
         this.canvas.fillStyle = 'black'
+
+        if (this.playing) {
+            this._drawMarker(pos)
+        }
     }
 
     connect(block: Block): void {
+        // if block is already a neighbor, do nothing
+        for (let c of this.connections) {
+            if (c.block.pos.x === block.pos.x && c.block.pos.y === block.pos.y) {
+                return
+            }
+        }
+
         // do some math to figure out the connection direction
         let direction: string = null
         const [toX, toY] = [block.pos.x, block.pos.y]
@@ -73,6 +108,10 @@ class Block {
             direction: direction,
             block: block
         })
+    }
+
+    clearConnections(): void {
+        this.connections = []
     }
 
     drawConnections(pos: Point): void {
@@ -93,6 +132,20 @@ class Block {
                     break
             }
         }
+    }
+
+    _drawMarker = (pos: Point): void => {
+        const markerPos = {x: pos.x + 50, y: pos.y + 50}
+        this.canvas.beginPath()
+        this.canvas.arc(markerPos.x, markerPos.y, 20, 0, 2*Math.PI, true)
+        this.canvas.globalAlpha = this.marker.alpha
+        this.canvas.fill()
+
+        this.marker.alpha -= (1/30)
+        if (this.marker.alpha < 0) {
+            this.playing = false
+        }
+        this.canvas.globalAlpha = 1.0
     }
 
     _drawDownConnection = (pos: Point): void => {
