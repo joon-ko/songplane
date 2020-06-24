@@ -10,6 +10,13 @@ const LIGHT_BLUE = '#c6e1ff'
 const LIGHT_ORANGE = '#ffe29f'
 const LIGHT_GREEN = 'rgb(186, 255, 184)'
 const LIGHT_PURPLE = 'rgb(208, 144, 248)'
+const BLOCK_RED = 'rgb(255, 0, 97)'
+const BLOCK_ORANGE = 'rgb(255, 170, 0)'
+const BLOCK_YELLOW = 'rgb(250, 241, 0)'
+const BLOCK_GREEN = 'rgb(138, 232, 0)'
+const BLOCK_BLUE = 'rgb(0, 167, 234)'
+const BLOCK_PURPLE = 'rgb(119, 52, 234)'
+const BLOCK_COLORS = [BLOCK_RED, BLOCK_ORANGE, BLOCK_YELLOW, BLOCK_GREEN, BLOCK_BLUE, BLOCK_PURPLE]
 
 interface Point {
     x: number,
@@ -36,7 +43,7 @@ let connectMode = false
 
 let frame = 0
 let waveType = 'sine'
-let color = LIGHT_BLUE
+let color = BLOCK_BLUE
 let rootPitch = 40
 let pitch = 40
 let delta = 0
@@ -186,6 +193,10 @@ const onKeyDown = (e: KeyboardEvent): void => {
     }
     if (e.key === 'Backspace') {
         blocks.clear()
+    }
+    if (['q', 'w', 'e', 'r', 't', 'y'].includes(e.key)) {
+        const i = ['q', 'w', 'e', 'r', 't', 'y'].indexOf(e.key)
+        color = BLOCK_COLORS[i]
     }
 
     for (let i = 0; i < holdArray.length; i++) {
@@ -360,6 +371,7 @@ const renderInfo = (): void => {
         <div>frame: ${frame}</div>
         <div>selected: (${selected.x}, ${selected.y})</div>
         <div>wave: ${waveType}</div>
+        <div>color: <span style="color:${color};">${color}</span></div>
         <div>pitch: ${pitchName}, ${Math.round(frequency)} Hz</div>
         <div>connect mode: ${connectMode}</div>
     `
