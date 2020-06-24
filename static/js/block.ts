@@ -27,6 +27,7 @@ class Block {
     marker: SongMarker
     playing: boolean
     kill: boolean
+    mute: boolean
 
     canvas: CanvasRenderingContext2D
     audio: AudioContext
@@ -58,6 +59,11 @@ class Block {
         this.kill = false
 
         this.canvas = options.canvas
+
+        this.mute = this.frequency === 0
+        if (this.mute) {
+            return
+        }
         this.audio = options.audio
         this.source = new OscillatorNode(this.audio, {
             frequency: this.frequency,
@@ -72,15 +78,6 @@ class Block {
     }
 
     playSound(): void {
-        if (this.kill) {
-            return
-        }
-        this.volume.gain.cancelScheduledValues(audioCtx.currentTime)
-        this.volume.gain.setValueCurveAtTime([0, 0.1], audioCtx.currentTime, 0.005)
-        this.volume.gain.setValueCurveAtTime([0.1, 0], audioCtx.currentTime + 0.005, this.noteLength - 0.005)
-        this.marker.alpha = 1.0
-        this.playing = true
-
         window.setTimeout((): void => {
             for (let c of this.connections) {
                 c.red = 255
@@ -88,6 +85,15 @@ class Block {
                 c.block.playSound()
             }
         }, this.blockLength)
+        this.marker.alpha = 1.0
+        this.playing = true
+
+        if (this.kill || this.mute) {
+            return
+        }
+        this.volume.gain.cancelScheduledValues(audioCtx.currentTime)
+        this.volume.gain.setValueCurveAtTime([0, 0.1], audioCtx.currentTime, 0.005)
+        this.volume.gain.setValueCurveAtTime([0.1, 0], audioCtx.currentTime + 0.005, this.noteLength - 0.005)
     }
 
     // draw the inside of the block

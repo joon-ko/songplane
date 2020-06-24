@@ -164,18 +164,34 @@ const onKeyDown = (e: KeyboardEvent): void => {
     }
 
     if (e.key === 'f') {
-        if (!blocks.has(selected)) {
-            const options = {
-                pos: selected,
-                canvas: ctx,
-                audio: audioCtx,
-                color: color,
-                frequency: frequency,
-                type: waveType as OscillatorType,
-                blockLength: blockLength
-            }
-            blocks.set(selected, new Block(options))
+        if (blocks.has(selected)) {
+            return
         }
+        const options = {
+            pos: selected,
+            canvas: ctx,
+            audio: audioCtx,
+            color: color,
+            frequency: frequency,
+            type: waveType as OscillatorType,
+            blockLength: blockLength
+        }
+        blocks.set(selected, new Block(options))
+    }
+    if (e.key === 'g') {
+        if (blocks.has(selected)) {
+            return
+        }
+        const options = {
+            pos: selected,
+            canvas: ctx,
+            audio: audioCtx,
+            color: 'rgb(220, 220, 220)',
+            frequency: 0,
+            type: 'sine' as OscillatorType,
+            blockLength: blockLength
+        }
+        blocks.set(selected, new Block(options))
     }
     if (e.key === 'Enter') {
         if (!blocks.has(selected)) {
