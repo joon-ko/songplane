@@ -1,6 +1,7 @@
 const canvas = <HTMLCanvasElement> document.getElementById('canvas')
 const ctx = <CanvasRenderingContext2D> canvas.getContext('2d')
 const info = <HTMLElement> document.getElementById('info')
+const svg = document.getElementById('svg')
 
 const FONT_SIZE = 14
 const CAMERA_SPEED = 5 // px/frame
@@ -34,6 +35,17 @@ let selected: Point = {x: 0, y: 0}
 let connectMode = false
 
 let frame = 0
+let waveType = 'sine'
+let color = LIGHT_BLUE
+let rootPitch = 40
+let pitch = 40
+let delta = 0
+let pitchName = 'C4'
+let frequency = 261.63
+let blockLength = 500
+
+// highlight current delta
+document.getElementById(`key-${delta}`).style.fill = '#7aeb7a'
 
 // [space, left, up, right, down]
 let holdArray = [false, false, false, false, false]
@@ -133,9 +145,6 @@ const onMousemove = (e: MouseEvent): void => {
 }
 
 const onMouseup = (e: MouseEvent): void => {
-    if (!holdArray[Key.Space]) { // not holding space
-        return
-    }
     holdPoint = null
     oldCamera = null
 }
@@ -147,40 +156,18 @@ const onKeyDown = (e: KeyboardEvent): void => {
         audioStarted = true
     }
 
-    if (e.key === 'q') {
+    if (e.key === 'f') {
         if (!blocks.has(selected)) {
             const options = {
                 pos: selected,
                 canvas: ctx,
                 audio: audioCtx,
-                color: LIGHT_BLUE,
-                frequency: 220,
-                type: 'sawtooth' as OscillatorType
+                color: color,
+                frequency: frequency,
+                type: waveType as OscillatorType,
+                blockLength: blockLength
             }
             blocks.set(selected, new Block(options))
-        } else {
-            const block = blocks.get(selected)
-            block.color = LIGHT_BLUE
-            block.source.frequency.value = 220
-            block.source.type = 'sawtooth'
-        }
-    }
-    if (e.key === 'w') {
-        if (!blocks.has(selected)) {
-            const options = {
-                pos: selected,
-                canvas: ctx,
-                audio: audioCtx,
-                color: LIGHT_ORANGE,
-                frequency: 440,
-                type: 'sine' as OscillatorType
-            }
-            blocks.set(selected, new Block(options))
-        } else {
-            const block = blocks.get(selected)
-            block.color = LIGHT_ORANGE
-            block.source.frequency.value = 440
-            block.source.type = 'sine'
         }
     }
     if (e.key === 'Enter') {
@@ -227,8 +214,39 @@ canvas.addEventListener('mousemove', onMousemove)
 canvas.addEventListener('mouseup', onMouseup)
 document.addEventListener('keydown', onKeyDown)
 document.addEventListener('keyup', onKeyUp)
+svg.addEventListener('click', (e) => {
+    const oldDelta = delta
+    delta = Number((<Element>e.target).id.split('-')[1])
+    pitch = rootPitch + delta
+    pitchName = pitchNameMap.get(pitch)
+    frequency = keyToFrequency(pitch)
+    const black = [1, 3, 6, 8, 10].includes(oldDelta)
+    if (oldDelta !== delta) {
+        document.getElementById(`key-${oldDelta}`).style.fill = black ? 'black' : 'white'
+        document.getElementById(`key-${delta}`).style.fill = '#7aeb7a'
+    }
+})
+
+const rects = document.querySelectorAll('rect')
+rects.forEach(rect => {
+  rect.addEventListener('mouseenter', (e) => {
+    const targetDelta = Number((<Element>e.target).id.split('-')[1])
+    if (targetDelta !== delta) {
+      (<SVGStyleElement>e.target).style.fill = '#ffc0cb'
+    }
+  })
+  rect.addEventListener('mouseleave', (e) => {
+    const targetDelta = Number((<Element>e.target).id.split('-')[1])
+    if (targetDelta !== delta) {
+      const black = [1, 3, 6, 8, 10].includes(targetDelta);
+      (<SVGStyleElement>e.target).style.fill = black ? 'black' : 'white'
+    }
+  })
+})
 
 ///////////////////////////////////////////////////////////////////////////////
+
+const keyToFrequency = (key: number): number => Math.pow(Math.pow(2, 1/12), key - 49) * 440
 
 // get a list of block coordinate neighbors
 const getNeighbors = (pos: Point): Point[] => {
@@ -341,6 +359,8 @@ const renderInfo = (): void => {
     info.innerHTML = `
         <div>frame: ${frame}</div>
         <div>selected: (${selected.x}, ${selected.y})</div>
+        <div>wave: ${waveType}</div>
+        <div>pitch: ${pitchName}, ${Math.round(frequency)} Hz</div>
         <div>connect mode: ${connectMode}</div>
     `
 }

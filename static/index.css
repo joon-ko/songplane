@@ -7,17 +7,31 @@ html, body {
     display: block;
   }
 
+svg {
+    margin-top: 10px;
+}
+
+.white {
+    fill: white;
+    stroke: black;
+}
+
+.black {
+    fill: black;
+    stroke: black;
+}
+
 #canvas {
     background-color: rgb(248, 211, 211);
 }
 
-#info {
-    background-color: rgba(255, 255, 255, 0.8);
+#info-container {
+    background-color: rgb(240, 240, 240);
     position: absolute;
     top: 20px;
     left: 20px;
-    width: 150px;
-    height: 100px;
+    width: 185px;
+    height: 220px;
     padding: 10px;
     user-select: none;
 }
